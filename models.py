@@ -1,0 +1,175 @@
+import os
+import re
+import shelve
+from datetime import datetime, timezone
+from typing import Any, Optional
+
+import haversine
+import maidenhead
+import requests
+from loguru import logger
+from pydantic import BaseModel, Field, field_validator, model_validator
+
+from config import MY_LATITUDE, MY_LONGITUDE
+
+
+summit_re = re.compile("(?P<country>[A-Z0-9]{1,3})\/(?P<region>[A-Z]{2})-\d+")
+wwff_re = re.compile("[A-Za-z0-9]{2}[Ff]{2}-[0-9]{4}")
+iota_re = re.compile("iota", re.I)
+sota_region_url = "https://api-db2.sota.org.uk/api/regions/{}/{}"
+
+
+class PropMixin:
+
+    @property
+    def distance(self):
+        if self.latitude is not None and self.longitude is not None:
+            return haversine.haversine((MY_LATITUDE, MY_LONGITUDE), (self.latitude, self.longitude))
+        return None
+
+    @property
+    def programme(self):
+        try:
+            return getattr(self, 'programme_')
+        except AttributeError:
+            if wwff_re.search(self.comment or ''):
+                return 'WWFF ☘'
+            if iota_re.search(self.comment or ''):
+                return 'IOTA 🏝'
+        return ''
+
+    @property
+    def locator(self):
+        try:
+            return getattr(self, 'locator_')
+        except AttributeError:
+            return maidenhead.to_maiden(self.latitude, self.longitude, 3)
+
+
+class POTA(BaseModel, PropMixin):
+    frequency: float
+    mode: str
+    activator: str
+    reference: str
+    timestamp: datetime = Field(alias='spotTime')
+    locator_: str = Field(alias='grid6')
+    comment: str = Field(alias='comments')
+    latitude: float
+    longitude: float
+    origin: str = 'POTA'
+    programme_: str = Field(default='POTA 🏞')
+
+    @field_validator('timestamp', mode='before')
+    def ensure_utc(cls, v):
+        dt = datetime.fromisoformat(v)
+
+        if dt.tzinfo is None:
+            return dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc)
+
+
+def store_summits(db, country, region):
+    response = requests.get(sota_region_url.format(country, region))
+    if response.status_code != 200:
+        logger.debug("Failed to get summit codes")
+        return
+    data = response.json()
+    for summit in data['summits']:
+        db[summit['summitCode']] = summit['locator'], summit['latitude'], summit['longitude']
+
+
+def get_coordinates_from_summit_code(summit):
+    with shelve.open('summit.data') as db:
+        if summit not in db:
+            logger.debug("Summit {} not found locally", summit)
+            match = summit_re.match(summit)
+            if match:
+                store_summits(db, match.group("country"), match.group("region"))
+        return db.get(summit, (None, None, None))
+
+
+class SOTA(BaseModel, PropMixin):
+    frequency: Optional[float]
+    mode: str
+    timestamp: datetime = Field(alias='timeStamp')
+    activator: str = Field(alias='activatorCallsign')
+    reference: str = Field(alias='summitCode')
+    comment: Optional[str] = Field(alias='comments')
+    origin: str = 'SOTA'
+    latitude: float = None
+    longitude: float = None
+    programme_: str = Field(default='SOTA ⛰')
+    locator_: str = None
+
+    @model_validator(mode="after")
+    def get_coordinates(self):
+        self.locator_, self.latitude, self.longitude = get_coordinates_from_summit_code(self.reference)
+        return self
+
+    @field_validator('timestamp', mode='before')
+    @classmethod
+    def ensure_utc(cls, v):
+        dt = datetime.fromisoformat(v.replace("Z", "+00:00"))
+
+        if dt.tzinfo is None:
+            return dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc)
+
+    @field_validator("frequency", mode="before")
+    @classmethod
+    def scale_value(cls, v: Any) -> float:
+        return float(v or 0) * 1000
+
+
+class DXSummit(BaseModel, PropMixin):
+    frequency: float
+    activator: str = Field(alias='dx_call')
+    timestamp: datetime = Field(alias='time')
+    comment: Optional[str] = Field(alias='info')
+    mode: str = Field(default='')
+    latitude: float = Field(alias='dx_latitude')
+    longitude: float = Field(alias='dx_longitude')
+    origin: str = 'DXSummit'
+
+    @field_validator('timestamp', mode='before')
+    @classmethod
+    def ensure_utc(cls, v):
+        try:
+            dt = datetime.fromisoformat(v)
+        except Exception as exc:
+            logger.exception(v)
+            raise exc
+
+        if dt.tzinfo is None:
+            return dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc)
+
+
+class DXHeat(BaseModel, PropMixin):
+    frequency: float = Field(alias='Frequency')
+    activator: str = Field(alias='DXCall')
+    Time: str
+    Date: str
+    mode: Optional[str] = Field(alias='Mode', default='')
+    locator_: Optional[str] = Field(alias='DXLocator', default='')
+    comment: str = Field(alias='Comment')
+    latitude: float = None
+    longitude: float = None
+    origin: str = 'DXHeat'
+
+    @model_validator(mode="after")
+    def get_coordinates_from_locator(self):
+        if not self.locator:
+            return self
+        self.latitude, self.longitude = maidenhead.to_location(self.locator_)
+        return self
+
+    @field_validator('mode', mode='before')
+    @classmethod
+    def convert_mode(cls, v):
+        return 'SSB' if v in ('LSB', 'USB') else v
+
+    @property
+    def timestamp(self):
+        return datetime.strptime(f"{self.Date} {self.Time} +0000", "%d/%m/%y %H:%M %z")
+
