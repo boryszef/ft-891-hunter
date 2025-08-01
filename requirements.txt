@@ -8,3 +8,6 @@ PyQt6==6.9.1
 pyserial==3.5
 python-dotenv==1.1.1
 requests==2.32.4
+
+astroid==3.3.11
+pylint==3.3.7
