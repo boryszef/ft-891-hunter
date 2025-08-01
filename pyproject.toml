@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=58"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ft-891-hunter"
+version = "0.1.0"
+description = "POTA/SOTA/WWFF spotter with assist for FT-891"
+license = "MIT"
+dependencies = [
+    "haversine==2.9.0",
+    "humanize==4.12.3",
+    "loguru==0.7.3",
+    "maidenhead==1.8.0",
+    "pydantic==2.11.7",
+    "PyQt6==6.9.1",
+    "pyserial==3.5",
+    "python-dotenv==1.1.1",
+    "requests==2.32.4",
+    "platformdirs==4.3.8",
+]
+
+[project.scripts]
+ft-891-hunter = "ft_891_hunter.main:main"
+
+[project.optional-dependencies]
+dev = [
+    "isort==6.0.1",
+    "pylint==3.3.7",
+    "build==1.2.2.post1",
+]
+
+[tool.setuptools]
+packages = ["ft_891_hunter"]
+
+[tool.setuptools.package-data]
+"ft_891_hunter" = ["resources/*.css", "resources/env.template"]
+

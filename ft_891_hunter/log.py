@@ -1,5 +1,6 @@
-from loguru import logger
 from collections import deque
+
+from loguru import logger
 
 
 log_buffer = deque(maxlen=1000)

@@ -1,12 +1,10 @@
 from collections import deque
 
 from PyQt6.QtCore import QObject, Qt, QThread, pyqtSignal, pyqtSlot
-from PyQt6.QtWidgets import (QDialog, QLabel,
-                             QPlainTextEdit, QStackedLayout,
-                             QTableWidget, QTableWidgetItem, QVBoxLayout,
-                             )
+from PyQt6.QtWidgets import (QDialog, QLabel, QPlainTextEdit, QStackedLayout,
+                             QTableWidget, QTableWidgetItem, QVBoxLayout)
 
-from log import logger, log_buffer
+from ft_891_hunter.log import log_buffer, logger
 
 
 class LogViewer(QDialog):

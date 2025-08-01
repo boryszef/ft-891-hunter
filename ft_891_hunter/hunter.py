@@ -1,14 +1,15 @@
 import sys
+from importlib.resources import files
 
 import serial
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import (QApplication, QMainWindow, QPushButton,
-                             QVBoxLayout, QWidget, QStackedLayout, QLabel)
+from PyQt6.QtWidgets import (QApplication, QLabel, QMainWindow, QPushButton,
+                             QStackedLayout, QVBoxLayout, QWidget)
 
-from config import STATUS_TIMEOUT, UPDATE_PERIOD, serial_settings
-from dialogs import LogViewer, SpotTable
-from log import logger
-from worker import ApiManager
+from ft_891_hunter.config import STATUS_TIMEOUT, UPDATE_PERIOD, serial_settings
+from ft_891_hunter.dialogs import LogViewer, SpotTable
+from ft_891_hunter.log import logger
+from ft_891_hunter.worker import ApiManager
 
 
 class MainWindow(QMainWindow):
@@ -77,19 +78,12 @@ class MainWindow(QMainWindow):
             self.serial.write(msg)
         except (FileNotFoundError, serial.serialutil.SerialException):
             logger.exception("Serial port not available")
-            return
 
 
-app = QApplication(sys.argv)
-with open('dark.css', encoding='ascii') as css:
-    app.setStyleSheet(css.read())
-
-main_window = MainWindow()
-main_window.show()
-
-
-if __name__ == '__main__':
-    logger.debug('Application starting')
-    app.exec()
-    logger.debug('Application exited')
+def get_app():
+    app = QApplication(sys.argv)
+    css_path = files("ft_891_hunter.resources").joinpath("dark.css")
+    with open(css_path, encoding='ascii') as css:
+        app.setStyleSheet(css.read())
+    return app
 

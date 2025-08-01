@@ -7,8 +7,8 @@ from PyQt6.QtCore import QObject, QThread, QTimer, QUrl, pyqtSignal, pyqtSlot
 from PyQt6.QtNetwork import (QNetworkAccessManager, QNetworkReply,
                              QNetworkRequest)
 
-from models import POTA, SOTA, DXHeat, DXSummit
-from log import logger
+from ft_891_hunter.log import logger
+from ft_891_hunter.models import POTA, SOTA, DXHeat, DXSummit
 
 
 SpotData = namedtuple(

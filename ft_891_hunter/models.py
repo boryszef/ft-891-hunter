@@ -1,4 +1,3 @@
-import os
 import re
 import shelve
 from datetime import datetime, timezone
@@ -9,13 +8,12 @@ import maidenhead
 import requests
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from config import MY_LATITUDE, MY_LONGITUDE
-from log import logger
+from ft_891_hunter.config import MY_LATITUDE, MY_LONGITUDE, SHELVE_PATH, API_TIMEOUT
+from ft_891_hunter.log import logger
 
-
-summit_re = re.compile("(?P<country>[A-Z0-9]{1,3})\/(?P<region>[A-Z]{2})-\d+")
-wwff_re = re.compile("[A-Za-z0-9]{2}[Ff]{2}-[0-9]{4}")
-iota_re = re.compile("iota", re.I)
+summit_re = re.compile(r"(?P<country>[A-Z0-9]{1,3})\/(?P<region>[A-Z]{2})-\d+")
+wwff_re = re.compile(r"[A-Za-z0-9]{2}[Ff]{2}-[0-9]{4}")
+iota_re = re.compile(r"iota", re.I)
 sota_region_url = "https://api-db2.sota.org.uk/api/regions/{}/{}"
 
 
@@ -60,6 +58,7 @@ class POTA(BaseModel, PropMixin):
     programme_: str = Field(default='POTA 🏞')
 
     @field_validator('timestamp', mode='before')
+    @classmethod
     def ensure_utc(cls, v):
         dt = datetime.fromisoformat(v)
 
@@ -69,7 +68,7 @@ class POTA(BaseModel, PropMixin):
 
 
 def store_summits(db, country, region):
-    response = requests.get(sota_region_url.format(country, region))
+    response = requests.get(sota_region_url.format(country, region), timeout=API_TIMEOUT)
     if response.status_code != 200:
         logger.debug("Failed to get summit codes")
         return
@@ -79,7 +78,7 @@ def store_summits(db, country, region):
 
 
 def get_coordinates_from_summit_code(summit):
-    with shelve.open('summit.data') as db:
+    with shelve.open(SHELVE_PATH) as db:
         if summit not in db:
             logger.debug("Summit {} not found locally", summit)
             match = summit_re.match(summit)
@@ -103,7 +102,8 @@ class SOTA(BaseModel, PropMixin):
 
     @model_validator(mode="after")
     def get_coordinates(self):
-        self.locator_, self.latitude, self.longitude = get_coordinates_from_summit_code(self.reference)
+        self.locator_, self.latitude, self.longitude = \
+                get_coordinates_from_summit_code(self.reference)
         return self
 
     @field_validator('timestamp', mode='before')
