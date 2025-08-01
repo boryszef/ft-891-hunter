@@ -38,4 +38,7 @@ QStatusBar {
     background-color: #2b2b2b;
     color: #ffffff;
 }
-
+QPlainTextEdit {
+    font-size: 12pt;
+    font-family: "Courier New", monospace;
+}

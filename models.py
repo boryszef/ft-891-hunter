@@ -7,10 +7,10 @@ from typing import Any, Optional
 import haversine
 import maidenhead
 import requests
-from loguru import logger
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from config import MY_LATITUDE, MY_LONGITUDE
+from log import logger
 
 
 summit_re = re.compile("(?P<country>[A-Z0-9]{1,3})\/(?P<region>[A-Z]{2})-\d+")

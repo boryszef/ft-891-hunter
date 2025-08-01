@@ -1,12 +1,21 @@
 import itertools
 import json
+from collections import namedtuple
 
-from loguru import logger
+import humanize
 from PyQt6.QtCore import QObject, QThread, QTimer, QUrl, pyqtSignal, pyqtSlot
 from PyQt6.QtNetwork import (QNetworkAccessManager, QNetworkReply,
                              QNetworkRequest)
 
 from models import POTA, SOTA, DXHeat, DXSummit
+from log import logger
+
+
+SpotData = namedtuple(
+        "SpotData",
+        ['idx', 'timestamp', 'frequency', 'mode', 'programme', 'reference',
+         'activator', 'comment', 'locator', 'distance', 'origin']
+)
 
 
 class SpotHandler(QObject):
@@ -19,6 +28,7 @@ class SpotHandler(QObject):
     }
     default_bands = ['40m', '15m', '2m', '70cm']
     default_modes = ['SSB', 'FM', '']
+    unique_finished = pyqtSignal(list)
 
     def __init__(self):
         super().__init__()
@@ -39,28 +49,6 @@ class SpotHandler(QObject):
             del self.spots[name]
         logger.debug("Storing {} {} spots", len(spots), name)
         self.spots[name] = spots
-
-    def get_unique(self):
-        """
-        Filter spots, sort them by time and then pick unique items;
-        The same spot might be returned from more than one API.
-        """
-
-        sdata = sorted(
-            self.filter_spots(itertools.chain(*self.spots.values())),
-            key=lambda item: getattr(item, 'timestamp'),
-            reverse=True
-        )
-        unique = []
-        for item in sdata:
-            found = False
-            for ex in unique:
-                if item.activator == ex.activator and abs(item.frequency - ex.frequency) < 1:
-                    found = True
-                    break
-            if not found:
-                unique.append(item)
-        return unique
 
     @staticmethod
     def filter_spots(spots: list, bands=None, mode=None):
@@ -89,6 +77,7 @@ class ApiManager(QNetworkAccessManager):
         )
     }
     store_spots = pyqtSignal(tuple)
+    filter_spots = pyqtSignal(dict)
 
     def __init__(self, table, poll_time):
         super().__init__(None)
@@ -107,12 +96,19 @@ class ApiManager(QNetworkAccessManager):
         self.timer.timeout.connect(self.fetch_all)
         self.timer.start(poll_time)
 
+        self.spot_filter_thread = QThread()
+        self.spot_filter_worker = SpotFilterWorker()
+        self.spot_filter_worker.moveToThread(self.spot_filter_thread)
+        self.spot_filter_worker.finished.connect(self.table.populate_table)
+        self.filter_spots.connect(self.spot_filter_worker.run)
+        self.spot_filter_thread.start()
+
         self.table_timer = QTimer()
-        self.table_timer.timeout.connect(self.rebuild_table)
+        self.table_timer.timeout.connect(lambda: self.filter_spots.emit(self.spot_handler.spots))
         self.table_timer.start(poll_time)
 
         self.fetch_all()
-        QTimer().singleShot(5000, self.rebuild_table)
+        QTimer().singleShot(5000, lambda: self.filter_spots.emit(self.spot_handler.spots))
 
     def fetch_all(self):
         """Start asynchronous fetch from each defined API and mark as work-in-progress"""
@@ -142,9 +138,47 @@ class ApiManager(QNetworkAccessManager):
 
         reply.deleteLater()
 
-    def rebuild_table(self):
-        """Get unique spots and pass to the table"""
 
-        unique = self.spot_handler.get_unique()
-        self.table.populate_table(unique)
+class SpotFilterWorker(QObject):
+    finished = pyqtSignal(list)
+
+    @pyqtSlot(dict)
+    def run(self, spots):
+        """
+        Filter spots, sort them by time and then pick unique items;
+        The same spot might be returned from more than one API.
+        """
+
+        logger.debug("Filtering spots")
+        sdata = sorted(
+            SpotHandler.filter_spots(itertools.chain(*spots.values())),
+            key=lambda item: getattr(item, 'timestamp'),
+            reverse=True
+        )
+        unique = []
+        idx = 0
+        for item in sdata:
+            found = False
+            for ex in unique:
+                if item.activator == ex.activator and abs(item.frequency - float(ex.frequency)) < 1:
+                    found = True
+                    break
+            if not found:
+                spot = SpotData(
+                    idx=idx,
+                    timestamp=humanize.naturaltime(item.timestamp),
+                    frequency=str(item.frequency),
+                    mode=item.mode,
+                    programme=item.programme,
+                    reference=getattr(item, 'reference', ''),
+                    activator=item.activator,
+                    comment=item.comment,
+                    locator=item.locator,
+                    distance=f"{item.distance:.0f}" if item.distance else "",
+                    origin=item.origin
+                )
+                unique.append(spot)
+                idx += 1
+        logger.debug("Filtered {} spots", len(unique))
+        self.finished.emit(unique)
 
