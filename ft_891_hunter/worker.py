@@ -182,4 +182,3 @@ class SpotFilterWorker(QObject):
                 idx += 1
         logger.debug("Filtered {} spots", len(unique))
         self.finished.emit(unique)
-

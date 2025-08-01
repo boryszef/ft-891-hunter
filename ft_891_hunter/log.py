@@ -15,4 +15,3 @@ logger.remove()
 logger.add(buffer_sink, format="{time:HH:mm:ss} | {level} | {message}", level="DEBUG")
 
 __all__ = ["logger", "log_buffer"]
-
