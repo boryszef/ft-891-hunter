@@ -86,4 +86,3 @@ def get_app():
     with open(css_path, encoding='ascii') as css:
         app.setStyleSheet(css.read())
     return app
-

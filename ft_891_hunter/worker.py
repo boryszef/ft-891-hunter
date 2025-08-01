@@ -1,3 +1,5 @@
+"""Worker classes related to fetching spots from APIs"""
+
 import itertools
 import json
 from collections import namedtuple

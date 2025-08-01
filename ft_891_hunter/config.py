@@ -1,3 +1,5 @@
+"""Static configuration plus user settings from the env file"""
+
 import os
 import sys
 
@@ -39,4 +41,3 @@ serial_settings = {
     'stopbits': 1,
     'timeout': 3
 }
-

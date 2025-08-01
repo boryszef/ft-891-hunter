@@ -1,3 +1,5 @@
+"""Application specific widgets and popups"""
+
 from collections import deque
 
 from PyQt6.QtCore import QObject, Qt, QThread, pyqtSignal, pyqtSlot
@@ -125,9 +127,10 @@ class SpotTable(QTableWidget):
         self.stack.setCurrentIndex(1)
 
     def get_selected_freq(self, row):
+        """Get frequency from the selected cell as int kHz"""
+
         item = self.item(row, self.freq_index)
         try:
             return int(round(float(item.text()) * 1000))
         except (ValueError, TypeError):
             return None
-

@@ -1,3 +1,8 @@
+"""
+Pydantic models for incoming spot data
+together with logic related to unification and alignment of data
+"""
+
 import re
 import shelve
 from datetime import datetime, timezone
@@ -21,12 +26,16 @@ class PropMixin:
 
     @property
     def distance(self):
+        """Measure distance with respect to own coordinates (from the env)"""
+
         if self.latitude is not None and self.longitude is not None:
             return haversine.haversine((MY_LATITUDE, MY_LONGITUDE), (self.latitude, self.longitude))
         return None
 
     @property
     def programme(self):
+        """Guess programme based on the comment parameter"""
+
         try:
             return getattr(self, 'programme_')
         except AttributeError:
@@ -38,6 +47,8 @@ class PropMixin:
 
     @property
     def locator(self):
+        """Get the Maidenhead locator from coordinates"""
+
         try:
             return getattr(self, 'locator_')
         except AttributeError:
@@ -60,6 +71,8 @@ class POTA(BaseModel, PropMixin):
     @field_validator('timestamp', mode='before')
     @classmethod
     def ensure_utc(cls, v):
+        """Add UTC timezone to the timestamp"""
+
         dt = datetime.fromisoformat(v)
 
         if dt.tzinfo is None:
@@ -68,6 +81,8 @@ class POTA(BaseModel, PropMixin):
 
 
 def store_summits(db, country, region):
+    """Get missing summit info and store in the shelve cache"""
+
     response = requests.get(SOTA_REGION_URL.format(country, region), timeout=API_TIMEOUT)
     if response.status_code != 200:
         logger.debug("Failed to get summit codes")
@@ -78,6 +93,11 @@ def store_summits(db, country, region):
 
 
 def get_coordinates_from_summit_code(summit):
+    """
+    Get coordinates from the cached summit information based on the summit code;
+    call API if not found.
+    """
+
     with shelve.open(SHELVE_PATH) as db:
         if summit not in db:
             logger.debug("Summit {} not found locally", summit)
@@ -102,6 +122,8 @@ class SOTA(BaseModel, PropMixin):
 
     @model_validator(mode="after")
     def get_coordinates(self):
+        """Get activator coordinates based on the summit code"""
+
         self.locator_, self.latitude, self.longitude = \
                 get_coordinates_from_summit_code(self.reference)
         return self
@@ -109,6 +131,8 @@ class SOTA(BaseModel, PropMixin):
     @field_validator('timestamp', mode='before')
     @classmethod
     def ensure_utc(cls, v):
+        """Add UTC timezone to the timestamp"""
+
         dt = datetime.fromisoformat(v.replace("Z", "+00:00"))
 
         if dt.tzinfo is None:
@@ -118,6 +142,8 @@ class SOTA(BaseModel, PropMixin):
     @field_validator("frequency", mode="before")
     @classmethod
     def scale_value(cls, v: Any) -> float:
+        """Frequency should be stored in kHz"""
+
         return float(v or 0) * 1000
 
 
@@ -134,6 +160,8 @@ class DXSummit(BaseModel, PropMixin):
     @field_validator('timestamp', mode='before')
     @classmethod
     def ensure_utc(cls, v):
+        """Add UTC timezone to the timestamp"""
+
         try:
             dt = datetime.fromisoformat(v)
         except Exception as exc:
@@ -167,9 +195,12 @@ class DXHeat(BaseModel, PropMixin):
     @field_validator('mode', mode='before')
     @classmethod
     def convert_mode(cls, v):
+        """Mode should be stored as SSB"""
+
         return 'SSB' if v in ('LSB', 'USB') else v
 
     @property
     def timestamp(self):
-        return datetime.strptime(f"{self.Date} {self.Time} +0000", "%d/%m/%y %H:%M %z")
+        """Combine date and time into a single timestamp"""
 
+        return datetime.strptime(f"{self.Date} {self.Time} +0000", "%d/%m/%y %H:%M %z")

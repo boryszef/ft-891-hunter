@@ -1,3 +1,5 @@
+"""Application wide logger settings"""
+
 from collections import deque
 
 from loguru import logger
