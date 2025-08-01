@@ -3,8 +3,8 @@ from importlib.resources import files
 
 import serial
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import (QApplication, QLabel, QMainWindow, QPushButton,
-                             QStackedLayout, QVBoxLayout, QWidget) # pylint: disable=E0401,E0611
+from PyQt6.QtWidgets import (QApplication, QLabel, QMainWindow, QPushButton,  # pylint: disable=E0401,E0611
+                             QStackedLayout, QVBoxLayout, QWidget)
 
 from ft_891_hunter.config import STATUS_TIMEOUT, UPDATE_PERIOD, serial_settings
 from ft_891_hunter.dialogs import LogViewer, SpotTable

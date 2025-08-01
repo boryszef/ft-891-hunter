@@ -3,8 +3,8 @@
 from collections import deque
 
 from PyQt6.QtCore import QObject, Qt, QThread, pyqtSignal, pyqtSlot
-from PyQt6.QtWidgets import (QDialog, QLabel, QPlainTextEdit, QStackedLayout,
-                             QTableWidget, QTableWidgetItem, QVBoxLayout) # pylint: disable=E0401,E0611
+from PyQt6.QtWidgets import (QDialog, QLabel, QPlainTextEdit, QStackedLayout,  # pylint: disable=E0401,E0611
+                             QTableWidget, QTableWidgetItem, QVBoxLayout)
 
 from ft_891_hunter.log import log_buffer, logger
 
