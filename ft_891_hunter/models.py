@@ -14,7 +14,7 @@ from ft_891_hunter.log import logger
 summit_re = re.compile(r"(?P<country>[A-Z0-9]{1,3})\/(?P<region>[A-Z]{2})-\d+")
 wwff_re = re.compile(r"[A-Za-z0-9]{2}[Ff]{2}-[0-9]{4}")
 iota_re = re.compile(r"iota", re.I)
-sota_region_url = "https://api-db2.sota.org.uk/api/regions/{}/{}"
+SOTA_REGION_URL = "https://api-db2.sota.org.uk/api/regions/{}/{}"
 
 
 class PropMixin:
@@ -68,7 +68,7 @@ class POTA(BaseModel, PropMixin):
 
 
 def store_summits(db, country, region):
-    response = requests.get(sota_region_url.format(country, region), timeout=API_TIMEOUT)
+    response = requests.get(SOTA_REGION_URL.format(country, region), timeout=API_TIMEOUT)
     if response.status_code != 200:
         logger.debug("Failed to get summit codes")
         return

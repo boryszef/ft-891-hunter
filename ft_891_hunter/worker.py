@@ -9,6 +9,7 @@ from PyQt6.QtNetwork import (QNetworkAccessManager, QNetworkReply,
 
 from ft_891_hunter.log import logger
 from ft_891_hunter.models import POTA, SOTA, DXHeat, DXSummit
+from ft_891_hunter.config import PREFERRED_BANDS, PREFERRED_MODES
 
 
 SpotData = namedtuple(
@@ -26,8 +27,6 @@ class SpotHandler(QObject):
         '2m': (144000, 146000),
         '70cm': (430000, 440000)
     }
-    default_bands = ['40m', '15m', '2m', '70cm']
-    default_modes = ['SSB', 'FM', '']
     unique_finished = pyqtSignal(list)
 
     def __init__(self):
@@ -55,11 +54,11 @@ class SpotHandler(QObject):
         """Filter spots that match selected bands and modes"""
 
         if bands is None:
-            bands = SpotHandler.default_bands
+            bands = PREFERRED_BANDS
         if mode is None:
-            mode = SpotHandler.default_modes
+            mode = PREFERRED_MODES
         band_map = [SpotHandler.band_ranges[k] for k in bands]
-        band_ok = lambda f: any([f > b[0] and f < b[1] for b in band_map])
+        band_ok = lambda f: any(f > b[0] and f < b[1] for b in band_map)
         mode_ok = lambda m: m.upper() in mode
         return filter(
             lambda s: mode_ok(s.mode) and band_ok(s.frequency),
