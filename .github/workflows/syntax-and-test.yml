@@ -31,8 +31,8 @@ jobs:
         pip install --upgrade pip
         pip install -r requirements.txt
         pip install .
-        mkdir -p ${HOME}/.config/ft-891-hunter
-        cp -v ft_891_hunter/resources/env.template ${HOME}/.config/ft-891-hunter/.env
+        mkdir -p ${HOME}/.config/ft_891_hunter
+        cp -v ft_891_hunter/resources/env.template ${HOME}/.config/ft_891_hunter/.env
     - name: Lint with flake8
       run: |
         flake8 . --count --show-source --max-complexity=10 --max-line-length=127 --statistics
