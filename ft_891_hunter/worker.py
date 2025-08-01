@@ -60,8 +60,13 @@ class SpotHandler(QObject):
         if mode is None:
             mode = PREFERRED_MODES
         band_map = [SpotHandler.band_ranges[k] for k in bands]
-        band_ok = lambda f: any(f > b[0] and f < b[1] for b in band_map)
-        mode_ok = lambda m: m.upper() in mode
+
+        def band_ok(f):
+            return any(f > b[0] and f < b[1] for b in band_map)
+
+        def mode_ok(m):
+            return m.upper() in mode
+
         return filter(
             lambda s: mode_ok(s.mode) and band_ok(s.frequency),
             spots

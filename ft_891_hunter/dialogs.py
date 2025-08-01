@@ -102,7 +102,7 @@ class SpotTable(QTableWidget):
         self.setRowCount(len(unique))
         logger.debug('Populating table with {} spots', len(unique))
         for item in unique:
-            idx =item.idx
+            idx = item.idx
             timestamp = QTableWidgetItem(item.timestamp)
             timestamp.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
             self.setItem(idx, 0, timestamp)

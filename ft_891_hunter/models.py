@@ -124,8 +124,11 @@ class SOTA(BaseModel, PropMixin):
     def get_coordinates(self):
         """Get activator coordinates based on the summit code"""
 
-        self.locator_, self.latitude, self.longitude = \
-                get_coordinates_from_summit_code(self.reference)
+        (
+            self.locator_,
+            self.latitude,
+            self.longitude
+        ) = get_coordinates_from_summit_code(self.reference)
         return self
 
     @field_validator('timestamp', mode='before')
