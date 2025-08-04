@@ -64,7 +64,7 @@ class SpotHandler(QObject):
         logger.debug("Filter parameters: {} {}", band_map, mode)
 
         def band_ok(f):
-            return any(f > b[0] and f < b[1] for b in band_map)
+            return f and any(f > b[0] and f < b[1] for b in band_map)
 
         def mode_ok(m):
             return m.upper() in mode

@@ -1,0 +1,80 @@
+[
+	{
+		"info": "IOTA OC-001",
+		"dx_country": "Australia",
+		"de_latitude": 59.43,
+		"dx_latitude": -32,
+		"dx_longitude": -115.9,
+		"de_call": "ES2IPA",
+		"frequency": 14074,
+		"time": "2025-08-04T08:46:05",
+		"dx_call": "VK6GC",
+		"de_longitude": -24.73,
+		"id": 65170300
+	},
+	{
+		"info": "pota",
+		"dx_country": "Poland",
+		"de_latitude": 50.25,
+		"dx_latitude": 50.25,
+		"dx_longitude": -18.98,
+		"de_call": "SQ9LOJ-@",
+		"frequency": 7095,
+		"time": "2025-08-04T08:45:25",
+		"dx_call": "SP9WLG/P",
+		"de_longitude": -18.98,
+		"id": 65170298
+	},
+	{
+		"info": "WCA DL-04051",
+		"dx_country": "Fed. Rep. of Germany",
+		"de_latitude": 51,
+		"dx_latitude": 51,
+		"dx_longitude": -10,
+		"de_call": "DL0KWH-@",
+		"frequency": 14243,
+		"time": "2025-08-04T08:45:02",
+		"dx_call": "DL1RTW/P",
+		"de_longitude": -10,
+		"id": 65170297
+	},
+	{
+		"info": "WWFF FFF-0594",
+		"dx_country": "France",
+		"de_latitude": 60.13,
+		"dx_latitude": 46,
+		"dx_longitude": -2,
+		"de_call": "OH0M",
+		"frequency": 14050,
+		"time": "2025-08-04T08:41:32",
+		"dx_call": "F4GYM/P",
+		"de_longitude": -20.37,
+		"id": 65170283
+	},
+	{
+		"info": "CQ POTA",
+		"dx_country": "Sicily",
+		"de_latitude": 46,
+		"dx_latitude": 37.5,
+		"dx_longitude": -14,
+		"de_call": "F4ISZ-@",
+		"frequency": 14285,
+		"time": "2025-08-04T08:24:09",
+		"dx_call": "IT9JDE",
+		"de_longitude": -2,
+		"id": 65170260
+	},
+	{
+		"info": "WWFF ONFF-0772. By motorbike.",
+		"dx_country": "Belgium",
+		"de_latitude": 50.7,
+		"dx_latitude": 50.7,
+		"dx_longitude": -4.85,
+		"de_call": "ON8ON",
+		"frequency": 7110,
+		"time": "2025-08-04T08:22:50",
+		"dx_call": "OS8D/P",
+		"de_longitude": -4.85,
+		"id": 65170257
+	}
+]

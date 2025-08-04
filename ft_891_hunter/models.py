@@ -6,7 +6,7 @@ together with logic related to unification and alignment of data
 import re
 import shelve
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Optional
 
 import haversine
 import maidenhead
@@ -17,8 +17,9 @@ from ft_891_hunter.config import MY_LATITUDE, MY_LONGITUDE, SHELVE_PATH, API_TIM
 from ft_891_hunter.log import logger
 
 summit_re = re.compile(r"(?P<country>[A-Z0-9]{1,3})\/(?P<region>[A-Z]{2})-\d+")
-wwff_re = re.compile(r"[A-Za-z0-9]{2}[Ff]{2}-[0-9]{4}")
-iota_re = re.compile(r"iota", re.I)
+wwff_re = re.compile(r"[A-Za-z0-9]{1,2}[Ff]{2}-[0-9]{4}")
+iota_re = re.compile(r"(^|\s)iota($|\s)", re.I)
+pota_re = re.compile(r"(^|\s)pota($|\s)", re.I)
 SOTA_REGION_URL = "https://api-db2.sota.org.uk/api/regions/{}/{}"
 
 
@@ -43,6 +44,8 @@ class PropMixin:
                 return 'WWFF ☘'
             if iota_re.search(self.comment or ''):
                 return 'IOTA 🏝'
+            if pota_re.search(self.comment or ''):
+                return 'POTA 🏞'
         return ''
 
     @property
@@ -70,7 +73,7 @@ class POTA(BaseModel, PropMixin):
 
     @field_validator('timestamp', mode='before')
     @classmethod
-    def ensure_utc(cls, v):
+    def ensure_utc(cls, v: str):
         """Add UTC timezone to the timestamp"""
 
         dt = datetime.fromisoformat(v)
@@ -133,7 +136,7 @@ class SOTA(BaseModel, PropMixin):
 
     @field_validator('timestamp', mode='before')
     @classmethod
-    def ensure_utc(cls, v):
+    def ensure_utc(cls, v: str):
         """Add UTC timezone to the timestamp"""
 
         dt = datetime.fromisoformat(v.replace("Z", "+00:00"))
@@ -144,14 +147,14 @@ class SOTA(BaseModel, PropMixin):
 
     @field_validator("frequency", mode="before")
     @classmethod
-    def scale_value(cls, v: Any) -> float:
+    def scale_value(cls, v: str | None) -> float:
         """Frequency should be stored in kHz"""
 
         return float(v) * 1000 if v else None
 
     @field_validator("comment", mode="before")
     @classmethod
-    def convert_null_to_empty(cls, v):
+    def convert_null_to_empty(cls, v: str | None):
         return v or ""
 
 
@@ -167,7 +170,7 @@ class DXSummit(BaseModel, PropMixin):
 
     @field_validator('timestamp', mode='before')
     @classmethod
-    def ensure_utc(cls, v):
+    def ensure_utc(cls, v: str):
         """Add UTC timezone to the timestamp"""
 
         try:
