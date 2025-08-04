@@ -3,6 +3,7 @@
 import itertools
 import json
 from collections import namedtuple
+from typing import Iterable
 
 import humanize
 from PyQt6.QtCore import QObject, QThread, QTimer, QUrl, pyqtSignal, pyqtSlot
@@ -48,11 +49,11 @@ class SpotHandler(QObject):
         spots = [model(**sp) for sp in data]
         if name in self.spots:
             del self.spots[name]
-        logger.debug("Storing {} {} spots", len(spots), name)
         self.spots[name] = spots
+        logger.debug("Storing {} {} spots", len(self.spots[name]), name)
 
     @staticmethod
-    def filter_spots(spots: list, bands=None, mode=None):
+    def filter_spots(spots: Iterable, bands=None, mode=None):
         """Filter spots that match selected bands and modes"""
 
         if bands is None:
@@ -60,6 +61,7 @@ class SpotHandler(QObject):
         if mode is None:
             mode = PREFERRED_MODES
         band_map = [SpotHandler.band_ranges[k] for k in bands]
+        logger.debug("Filter parameters: {} {}", band_map, mode)
 
         def band_ok(f):
             return any(f > b[0] and f < b[1] for b in band_map)
@@ -156,11 +158,13 @@ class SpotFilterWorker(QObject):
         """
 
         logger.debug("Filtering spots")
+        spots_copy = list(itertools.chain(*spots.values()))
         sdata = sorted(
-            SpotHandler.filter_spots(itertools.chain(*spots.values())),
+            SpotHandler.filter_spots(spots_copy),
             key=lambda item: getattr(item, 'timestamp'),
             reverse=True
         )
+        logger.debug("Filtered {} spots", len(sdata))
         unique = []
         idx = 0
         for item in sdata:
@@ -185,5 +189,5 @@ class SpotFilterWorker(QObject):
                 )
                 unique.append(spot)
                 idx += 1
-        logger.debug("Filtered {} spots", len(unique))
+        logger.debug("{} unique spots", len(unique))
         self.finished.emit(unique)

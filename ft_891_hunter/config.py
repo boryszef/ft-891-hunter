@@ -24,7 +24,7 @@ UPDATE_PERIOD = int(os.getenv("SPOT_UPDATE_PERIOD", "30")) * 1000
 API_TIMEOUT = 5
 STATUS_TIMEOUT = 5_000
 PREFERRED_BANDS = os.getenv("PREFERRED_BANDS", "").lower().split(',')
-PREFERRED_MODES = os.getenv("PREFERRED_MODES", "").lower().split(',')
+PREFERRED_MODES = os.getenv("PREFERRED_MODES", "").upper().split(',')
 MY_LATITUDE = float(os.getenv("MY_LATITUDE", "0.0"))
 MY_LONGITUDE = float(os.getenv("MY_LONGITUDE", "0.0"))
 
