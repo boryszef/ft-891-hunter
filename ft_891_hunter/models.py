@@ -113,7 +113,7 @@ class SOTA(BaseModel, PropMixin):
     timestamp: datetime = Field(alias='timeStamp')
     activator: str = Field(alias='activatorCallsign')
     reference: str = Field(alias='summitCode')
-    comment: Optional[str] = Field(alias='comments')
+    comment: Optional[str] = Field(alias='comments', default='')
     origin: str = 'SOTA'
     latitude: float = None
     longitude: float = None
@@ -147,7 +147,12 @@ class SOTA(BaseModel, PropMixin):
     def scale_value(cls, v: Any) -> float:
         """Frequency should be stored in kHz"""
 
-        return float(v or 0) * 1000
+        return float(v) * 1000 if v else None
+
+    @field_validator("comment", mode="before")
+    @classmethod
+    def convert_null_to_empty(cls, v):
+        return v or ""
 
 
 class DXSummit(BaseModel, PropMixin):
