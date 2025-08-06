@@ -38,7 +38,14 @@ def dxsummit(spot_handler):
     return spot_handler.spots['dxsummit']
 
 
-def test_correct_structure(pota, sota, dxsummit):
+@pytest.fixture(scope="module")
+def dxheat(spot_handler):
+    with open('tests/dxheat_response.json', encoding='utf-8') as pota_file:
+        spot_handler.store_spots(('dxheat', pota_file.read()))
+    return spot_handler.spots['dxheat']
+
+
+def test_correct_structure(pota, sota, dxsummit, dxheat):
     assert len(pota) == 3
     assert all(isinstance(obj, BaseModel) for obj in pota)
 
@@ -47,6 +54,9 @@ def test_correct_structure(pota, sota, dxsummit):
 
     assert len(dxsummit) == 6
     assert all(isinstance(obj, BaseModel) for obj in dxsummit)
+
+    assert len(dxheat) == 7
+    assert all(isinstance(obj, BaseModel) for obj in dxheat)
 
 
 def test_simple_fields_pota(pota):
@@ -79,12 +89,19 @@ def test_simple_fields_sota(sota):
     assert sota[0].origin == 'SOTA'
 
 
+def test_simple_fields_dxheat(dxheat):
+    assert pytest.approx(dxheat[0].frequency, 1) == 7144
+    assert dxheat[0].activator == 'OE/PA3EFR/P'
+    assert dxheat[0].comment == "WWFF OEFF-0611"
+    assert dxheat[0].origin == 'DXHeat'
+
+
 def test_sota_frequency_conversion(sota):
     assert pytest.approx(sota[0].frequency, 1) == 14241
     assert sota[2].frequency == None
 
 
-def test_properties(pota, sota):
+def test_properties(pota, sota, dxsummit, dxheat):
     assert pota[0].locator == 'JO87kb'
     assert pytest.approx(pota[0].distance, 1) == 6520
     assert pota[0].programme == 'POTA 🏞'
@@ -94,6 +111,12 @@ def test_properties(pota, sota):
     assert pytest.approx(sota[0].longitude, 0.0001) == 4.5600
     assert pytest.approx(sota[0].distance, 1) == 525
     assert sota[0].programme == 'SOTA ⛰'
+
+    assert dxsummit[0].locator == 'DF28ba'
+    assert pytest.approx(dxsummit[0].distance, 1) == 12425
+
+    assert dxheat[0].locator == 'JN67PH'
+    assert dxheat[0].mode == 'SSB'
 
 
 def test_timestamp_pota(pota):
@@ -114,6 +137,25 @@ def test_timestamp_sota(sota):
     assert sota[0].timestamp.minute == 9
     assert sota[0].timestamp.second == 21
     assert sota[0].timestamp.tzinfo == timezone.utc
+
+
+def test_timestamp_dxsummit(dxsummit):
+    assert dxsummit[0].timestamp.year == 2025
+    assert dxsummit[0].timestamp.month == 8
+    assert dxsummit[0].timestamp.day == 4
+    assert dxsummit[0].timestamp.hour == 8
+    assert dxsummit[0].timestamp.minute == 46
+    assert dxsummit[0].timestamp.second == 5
+    assert dxsummit[0].timestamp.tzinfo == timezone.utc
+
+
+def test_timestamp_dxheat(dxheat):
+    assert dxheat[0].timestamp.year == 2025
+    assert dxheat[0].timestamp.month == 8
+    assert dxheat[0].timestamp.day == 4
+    assert dxheat[0].timestamp.hour == 10
+    assert dxheat[0].timestamp.minute == 42
+    assert dxheat[0].timestamp.tzinfo == timezone.utc
 
 
 def test_get_existing_summit_data_from_cache():
@@ -138,10 +180,16 @@ def test_get_missing_summit_data_from_cache():
         store_mock.assert_called_once_with(summits, 'F', 'CR')
 
 
-def test_programme_parsing(dxsummit):
+def test_programme_parsing(dxsummit, dxheat):
     assert dxsummit[0].programme == 'IOTA 🏝'
     assert dxsummit[1].programme == 'POTA 🏞'
     assert dxsummit[2].programme == ''
     assert dxsummit[3].programme == 'WWFF ☘'
     assert dxsummit[4].programme == 'POTA 🏞'
     assert dxsummit[5].programme == 'WWFF ☘'
+
+    assert dxheat[0].programme == 'WWFF ☘'
+    assert dxheat[3].programme == 'WWFF ☘'
+    assert dxheat[4].programme == 'WWFF ☘'
+    assert dxheat[5].programme == 'WWFF ☘'
+    assert dxheat[6].programme == 'WWFF ☘'
