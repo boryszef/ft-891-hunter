@@ -98,7 +98,7 @@ def test_simple_fields_dxheat(dxheat):
 
 def test_sota_frequency_conversion(sota):
     assert pytest.approx(sota[0].frequency, 1) == 14241
-    assert sota[2].frequency == None
+    assert sota[2].frequency is None
 
 
 def test_properties(pota, sota, dxsummit, dxheat):
