@@ -2,19 +2,20 @@ import sys
 from importlib.resources import files
 
 import serial
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import (QApplication, QLabel, QMainWindow, QPushButton,  # pylint: disable=E0401,E0611
+from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from PyQt6.QtWidgets import (QApplication, QLabel, QMainWindow, QPushButton, QDialog,  # pylint: disable=E0401,E0611
                              QStackedLayout, QVBoxLayout, QHBoxLayout, QWidget)
 
 from ft_891_hunter.config import STATUS_TIMEOUT, UPDATE_PERIOD, serial_settings
 from ft_891_hunter.dialogs import LogViewer, SpotTable, FilterSelector
 from ft_891_hunter.log import logger
-from ft_891_hunter.worker import ApiManager
+from ft_891_hunter.worker import ApiManager, SpotHandler, SpotTableUpdater
 
 
 class MainWindow(QMainWindow):
 
     serial = None
+    filter_spots = pyqtSignal(dict)
 
     def __init__(self):
         try:
@@ -67,8 +68,22 @@ class MainWindow(QMainWindow):
         self.resize(1400, 800)
 
         self.statusBar().showMessage("Starting", STATUS_TIMEOUT)
-        #self.table_updater = SpotTableUpdater(self.table)
-        self.api = ApiManager(self.table, UPDATE_PERIOD)
+
+        self.spot_processor_thread = QThread()
+        self.spot_handler = SpotHandler()
+        self.spot_handler.moveToThread(self.spot_processor_thread)
+
+        self.table_updater_thread = QThread()
+        self.table_updater = SpotTableUpdater()
+        self.table_updater.moveToThread(self.table_updater_thread)
+        self.table_updater.finished.connect(self.table.populate_table)
+
+        self.filter_spots.connect(self.table_updater.run)
+
+        self.api = ApiManager(self.table_updater, self.spot_handler, UPDATE_PERIOD)
+
+        self.table_updater_thread.start()
+        self.spot_processor_thread.start()
 
     def show_logs(self):
         """Show dialog with recent log records"""
@@ -78,7 +93,9 @@ class MainWindow(QMainWindow):
 
     def set_filters(self):
         dlg = FilterSelector(self)
-        dlg.show()
+        result = dlg.exec()
+        if result == QDialog.DialogCode.Accepted:
+            self.filter_spots.emit(self.spot_handler.spots)
 
     def cell_clicked(self, row, column):
         """When frequency cell clicked, tune the rig to that frequency"""

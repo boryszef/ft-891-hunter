@@ -142,7 +142,7 @@ class SpotTable(QTableWidget):
 class FilterSelector(QDialog):
     all_bands = ['80m', '40m', '20m', '15m', '10m', '6m', '2m', '70cm']
 
-    def __init__(self, parent=None):
+    def __init__(self, table_updater, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Filter spots")
         layout = QVBoxLayout(self)

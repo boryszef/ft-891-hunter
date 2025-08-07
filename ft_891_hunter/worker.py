@@ -35,7 +35,7 @@ class SpotHandler(QObject):
         '2m': (144000, 146000),
         '70cm': (430000, 440000)
     }
-    unique_finished = pyqtSignal(list)
+    store_finished = pyqtSignal()
 
     def __init__(self):
         super().__init__()
@@ -56,28 +56,7 @@ class SpotHandler(QObject):
             del self.spots[name]
         self.spots[name] = spots
         logger.debug("Storing {} {} spots", len(self.spots[name]), name)
-
-    @staticmethod
-    def filter_spots(spots: Iterable, bands=None, mode=None):
-        """Filter spots that match selected bands and modes"""
-
-        if bands is None:
-            bands = PREFERRED_BANDS
-        if mode is None:
-            mode = PREFERRED_MODES
-        band_map = [SpotHandler.band_ranges[k] for k in bands]
-        logger.debug("Filter parameters: {} {}", band_map, mode)
-
-        def band_ok(f):
-            return f and any(f > b[0] and f < b[1] for b in band_map)
-
-        def mode_ok(m):
-            return m.upper() in mode
-
-        return filter(
-            lambda s: mode_ok(s.mode) and band_ok(s.frequency),
-            spots
-        )
+        self.store_finished.emit()
 
 
 class ApiManager(QNetworkAccessManager):
@@ -92,36 +71,30 @@ class ApiManager(QNetworkAccessManager):
     store_spots = pyqtSignal(tuple)
     filter_spots = pyqtSignal(dict)
 
-    def __init__(self, table, poll_time):
+    def __init__(self, table_updater, spot_handler, poll_time):
         super().__init__(None)
-        self.table = table
+        self.table_updater = table_updater
+        self.spot_handler = spot_handler
         self.manager = QNetworkAccessManager()
         self.manager.finished.connect(self.handle_response)
 
         self.active_requests = {}
-        self.spot_processor_thread = QThread()
-        self.spot_handler = SpotHandler()
-        self.spot_handler.moveToThread(self.spot_processor_thread)
+
         self.store_spots.connect(self.spot_handler.store_spots)
-        self.spot_processor_thread.start()
+        self.spot_handler.store_finished.connect(self.trigger_table_update)
 
         self.timer = QTimer()
         self.timer.timeout.connect(self.fetch_all)
         self.timer.start(poll_time)
 
-        self.spot_filter_thread = QThread()
-        self.spot_filter_worker = SpotFilterWorker()
-        self.spot_filter_worker.moveToThread(self.spot_filter_thread)
-        self.spot_filter_worker.finished.connect(self.table.populate_table)
-        self.filter_spots.connect(self.spot_filter_worker.run)
-        self.spot_filter_thread.start()
+        self.filter_spots.connect(self.table_updater.run)
 
-        self.table_timer = QTimer()
+        self.table_timer = QTimer(self)
         self.table_timer.timeout.connect(lambda: self.filter_spots.emit(self.spot_handler.spots))
-        self.table_timer.start(poll_time)
+        self.table_timer.setInterval(10_000)
+        self.table_timer.setSingleShot(True)
 
         self.fetch_all()
-        QTimer().singleShot(5000, lambda: self.filter_spots.emit(self.spot_handler.spots))
 
     def fetch_all(self):
         """Start asynchronous fetch from each defined API and mark as work-in-progress"""
@@ -150,9 +123,17 @@ class ApiManager(QNetworkAccessManager):
             logger.warning("Error for {}: {}, code = {}", name, reply.errorString(), status_code)
 
         reply.deleteLater()
+    
+    @pyqtSlot()
+    def trigger_table_update(self):
+        if not self.table_timer.isActive():
+            logger.debug("Starting timer to update table")
+            self.table_timer.start()
+        else:
+            logger.debug("Skipping update, timer is active")
 
 
-class SpotFilterWorker(QObject):
+class SpotTableUpdater(QObject):
     finished = pyqtSignal(list)
 
     @pyqtSlot(dict)
@@ -165,7 +146,7 @@ class SpotFilterWorker(QObject):
         logger.debug("Filtering spots")
         spots_copy = list(itertools.chain(*spots.values()))
         sdata = sorted(
-            SpotHandler.filter_spots(spots_copy),
+            self.filter_spots(spots_copy),
             key=lambda item: getattr(item, 'timestamp'),
             reverse=True
         )
@@ -196,3 +177,25 @@ class SpotFilterWorker(QObject):
                 idx += 1
         logger.debug("{} unique spots", len(unique))
         self.finished.emit(unique)
+
+    @staticmethod
+    def filter_spots(spots: Iterable, bands=None, mode=None):
+        """Filter spots that match selected bands and modes"""
+
+        if bands is None:
+            bands = PREFERRED_BANDS
+        if mode is None:
+            mode = PREFERRED_MODES
+        band_map = [SpotHandler.band_ranges[k] for k in bands]
+        logger.debug("Filter parameters: {} {}", band_map, mode)
+
+        def band_ok(f):
+            return f and any(f > b[0] and f < b[1] for b in band_map)
+
+        def mode_ok(m):
+            return m.upper() in mode
+
+        return filter(
+            lambda s: mode_ok(s.mode) and band_ok(s.frequency),
+            spots
+        )
