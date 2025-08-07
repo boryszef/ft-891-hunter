@@ -3,9 +3,12 @@
 from collections import deque
 
 from PyQt6.QtCore import QObject, Qt, QThread, pyqtSignal, pyqtSlot
-from PyQt6.QtWidgets import (QDialog, QLabel, QPlainTextEdit, QStackedLayout,  # pylint: disable=E0401,E0611
-                             QTableWidget, QTableWidgetItem, QVBoxLayout)
+from PyQt6.QtWidgets import (QAbstractItemView,  # pylint: disable=E0401,E0611
+                             QDialog, QLabel, QListWidget, QPlainTextEdit,
+                             QPushButton, QStackedLayout, QTableWidget,
+                             QTableWidgetItem, QVBoxLayout)
 
+from ft_891_hunter.config import PREFERRED_BANDS
 from ft_891_hunter.log import log_buffer, logger
 
 
@@ -134,3 +137,38 @@ class SpotTable(QTableWidget):
             return int(round(float(item.text()) * 1000))
         except (ValueError, TypeError):
             return None
+
+
+class FilterSelector(QDialog):
+    all_bands = ['80m', '40m', '20m', '15m', '10m', '6m', '2m', '70cm']
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Filter spots")
+        layout = QVBoxLayout(self)
+
+        self.band_widget = QListWidget()
+        self.band_widget.setSelectionMode(QAbstractItemView.SelectionMode.MultiSelection)
+        self.band_widget.addItems(self.all_bands)
+        self.preselect_items()
+
+        self.ok_button = QPushButton("OK")
+        self.ok_button.clicked.connect(self.submit)
+        self.cancel_button = QPushButton("Cancel")
+        self.cancel_button.clicked.connect(self.reject)
+
+        layout.addWidget(self.band_widget)
+        layout.addWidget(self.ok_button)
+        layout.addWidget(self.cancel_button)
+
+    def preselect_items(self):
+        for idx in range(self.band_widget.count()):
+            item = self.band_widget.item(idx)
+            if item.text() in PREFERRED_BANDS:
+                item.setSelected(True)
+
+    def submit(self):
+        selected = set(item.text() for item in self.band_widget.selectedItems())
+        PREFERRED_BANDS.update(selected)
+        PREFERRED_BANDS.intersection_update(selected)
+        self.accept()

@@ -25,8 +25,13 @@ SpotData = namedtuple(
 class SpotHandler(QObject):
     models = {'pota': POTA, 'sota': SOTA, 'dxsummit': DXSummit, 'dxheat': DXHeat}
     band_ranges = {
+        '80m': (3500, 3800),
         '40m': (7000, 7200),
+        '30m': (10100, 10150),
+        '20m': (14000, 14350),
         '15m': (21000, 21450),
+        '10m': (28000, 29700),
+        '6m': (50000, 52000),
         '2m': (144000, 146000),
         '70cm': (430000, 440000)
     }

@@ -4,10 +4,10 @@ from importlib.resources import files
 import serial
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (QApplication, QLabel, QMainWindow, QPushButton,  # pylint: disable=E0401,E0611
-                             QStackedLayout, QVBoxLayout, QWidget)
+                             QStackedLayout, QVBoxLayout, QHBoxLayout, QWidget)
 
 from ft_891_hunter.config import STATUS_TIMEOUT, UPDATE_PERIOD, serial_settings
-from ft_891_hunter.dialogs import LogViewer, SpotTable
+from ft_891_hunter.dialogs import LogViewer, SpotTable, FilterSelector
 from ft_891_hunter.log import logger
 from ft_891_hunter.worker import ApiManager
 
@@ -43,22 +43,41 @@ class MainWindow(QMainWindow):
         self.stack.addWidget(spinner_label)
         self.stack.addWidget(self.table)
 
-        button = QPushButton("Logs")
-        button.setCheckable(True)
-        button.clicked.connect(self.show_logs)
+        button_container = QWidget()
+        button_layout = QHBoxLayout()
+        button_container.setLayout(button_layout)
+
+        filters_button = QPushButton("Filters")
+        filters_button.clicked.connect(self.set_filters)
+
+        logs_button = QPushButton("Logs")
+        logs_button.setCheckable(True)
+        logs_button.clicked.connect(self.show_logs)
+
+        quit_button = QPushButton("Quit")
+        quit_button.clicked.connect(QApplication.instance().quit)
+
+        button_layout.addWidget(filters_button)
+        button_layout.addWidget(logs_button)
+        button_layout.addWidget(quit_button)
 
         main_layout.addWidget(stacked_container)
-        main_layout.addWidget(button)
+        main_layout.addWidget(button_container)
 
         self.resize(1400, 800)
 
         self.statusBar().showMessage("Starting", STATUS_TIMEOUT)
+        #self.table_updater = SpotTableUpdater(self.table)
         self.api = ApiManager(self.table, UPDATE_PERIOD)
 
     def show_logs(self):
         """Show dialog with recent log records"""
 
         dlg = LogViewer(self)
+        dlg.show()
+
+    def set_filters(self):
+        dlg = FilterSelector(self)
         dlg.show()
 
     def cell_clicked(self, row, column):
